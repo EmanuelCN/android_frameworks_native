@@ -1827,8 +1827,6 @@ void Output::presentFrameAndReleaseLayers(bool flushEvenWhenDisabled) {
 
     mRenderSurface->onPresentDisplayCompleted();
 
-    const bool force_slower_follower_gpu_composition =
-            FlagManager::getInstance().force_slower_follower_gpu_composition_combined();
     for (auto* layer : getOutputLayersOrderedByZ()) {
         // The layer buffer from the previous frame (if any) is released
         // by HWC only when the release fence from this frame (if any) is
@@ -1843,27 +1841,14 @@ void Output::presentFrameAndReleaseLayers(bool flushEvenWhenDisabled) {
 
         // If the layer was client composited in the previous frame, we
         // need to merge with the previous client target acquire fence.
-        if (force_slower_follower_gpu_composition) {
-            releaseFence =
-                    Fence::merge("LayerRelease", releaseFence,
-                                 layer->getLayerFE().getAndClearLastClientTargetAcquireFence());
+        releaseFence = Fence::merge("LayerRelease", releaseFence,
+                                    layer->getLayerFE().getAndClearLastClientTargetAcquireFence());
 
-            // If there's no present fence nor last composition acquire fence, then return the
-            // current acquire fence rather than a NO_FENCE which would release immediately.
-            if (releaseFence == Fence::NO_FENCE) {
-                releaseFence = frame.clientTargetAcquireFence;
-            }
-
-            layer->getLayerFE().setLastClientTargetAcquireFence(frame.clientTargetAcquireFence);
-        } else {
-            // Since we do not track that, always merge with the current
-            // client target acquire fence when it is available, even though
-            // this is suboptimal.
-            if (outputState.usesClientComposition) {
-                releaseFence =
-                        Fence::merge("LayerRelease", releaseFence, frame.clientTargetAcquireFence);
-            }
+        if (releaseFence == Fence::NO_FENCE) {
+            releaseFence = frame.clientTargetAcquireFence;
         }
+
+        layer->getLayerFE().setLastClientTargetAcquireFence(frame.clientTargetAcquireFence);
         layer->getLayerFE().setReleaseFence(releaseFence);
         layer->getLayerFE().setReleasedBuffer(layer->getLayerFE().getCompositionState()->buffer);
     }

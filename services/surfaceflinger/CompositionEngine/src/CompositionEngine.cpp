@@ -205,16 +205,10 @@ void CompositionEngine::postComposition(CompositionRefreshArgs& args) {
     SFTRACE_CALL();
     ALOGV(__FUNCTION__);
 
-    const bool force_slower_follower_gpu_composition =
-            FlagManager::getInstance().force_slower_follower_gpu_composition_combined();
     for (auto& layerFE : args.layers) {
         if (layerFE->getReleaseFencePromiseStatus() ==
             LayerFE::ReleaseFencePromiseStatus::INITIALIZED) {
-            if (force_slower_follower_gpu_composition) {
-                layerFE->setReleaseFence(layerFE->getAndClearLastClientTargetAcquireFence());
-            } else {
-                layerFE->setReleaseFence(Fence::NO_FENCE);
-            }
+            layerFE->setReleaseFence(layerFE->getAndClearLastClientTargetAcquireFence());
         }
     }
 
@@ -224,11 +218,7 @@ void CompositionEngine::postComposition(CompositionRefreshArgs& args) {
     for (auto& layerFE : args.layersWithQueuedFrames) {
         if (layerFE->getReleaseFencePromiseStatus() ==
             LayerFE::ReleaseFencePromiseStatus::INITIALIZED) {
-            if (force_slower_follower_gpu_composition) {
-                layerFE->setReleaseFence(layerFE->getAndClearLastClientTargetAcquireFence());
-            } else {
-                layerFE->setReleaseFence(Fence::NO_FENCE);
-            }
+            layerFE->setReleaseFence(layerFE->getAndClearLastClientTargetAcquireFence());
         }
     }
 }
